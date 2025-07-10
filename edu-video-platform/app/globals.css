@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+/* Force form inputs to have proper styling */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="file"],
+textarea,
+select {
+  color: #111827 !important;
+  background-color: white !important;
+}
+
+/* Ensure body has proper background */
+body {
+  background-color: #f9fafb;
+}
