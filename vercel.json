@@ -1,6 +1,0 @@
-{
-  "buildCommand": "cd edu-video-platform && npm install && npm run build",
-  "outputDirectory": "edu-video-platform/.next",
-  "framework": "nextjs",
-  "rootDirectory": "edu-video-platform"
-}
