@@ -110,4 +110,4 @@ http://localhost:3000 でアプリケーションが起動します。
 ### 管理者ページにアクセスできない場合
 
 1. Supabaseで`profiles`テーブルの`role`が`admin`になっているか確認
-2. 一度ログアウトして再ログイン
+2. 一度ログアウトして再ログイン# Force redeploy at Thu Jul 10 16:54:29 JST 2025
