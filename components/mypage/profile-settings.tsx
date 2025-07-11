@@ -7,11 +7,19 @@ import { Database } from '@/types/database'
 
 type Profile = Database['public']['Tables']['profiles']['Row']
 
-export function ProfileSettings({ profile }: { profile: Profile }) {
-  const [name, setName] = useState(profile.name || '')
+export function ProfileSettings({ profile }: { profile: Profile | null }) {
+  const [name, setName] = useState(profile?.name || '')
   const [isLoading, setIsLoading] = useState(false)
   const supabase = createClient()
   const router = useRouter()
+
+  if (!profile) {
+    return (
+      <div className="max-w-lg bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <p className="text-gray-500">プロフィール情報を読み込んでいます...</p>
+      </div>
+    )
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

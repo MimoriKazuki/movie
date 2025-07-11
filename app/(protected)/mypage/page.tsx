@@ -14,11 +14,41 @@ export default async function MyPage() {
     redirect('/login')
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single()
+
+  // プロフィールが存在しない場合は作成（プロフィールが見つからないエラーの場合のみ）
+  if (!profile && profileError?.code === 'PGRST116') {
+    const { data: newProfile, error: insertError } = await supabase
+      .from('profiles')
+      .insert({
+        id: user.id,
+        email: user.email || '',
+        name: user.user_metadata?.name || '',
+        role: 'user',
+      })
+      .select()
+      .single()
+    
+    if (insertError) {
+      console.error('Profile creation error:', insertError)
+      // 既に存在している場合は再度取得を試みる
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+      
+      if (existingProfile) {
+        return redirect('/mypage')
+      }
+    } else if (newProfile) {
+      return redirect('/mypage')
+    }
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -54,7 +84,13 @@ export default async function MyPage() {
           <WatchHistory userId={user.id} />
         </TabsContent>
         <TabsContent value="settings">
-          <ProfileSettings profile={profile} />
+          <ProfileSettings profile={profile || {
+            id: user.id,
+            email: user.email || '',
+            name: user.user_metadata?.name || '',
+            role: 'user',
+            created_at: new Date().toISOString()
+          }} />
         </TabsContent>
       </Tabs>
     </div>
