@@ -19,7 +19,7 @@ export default function VimeoPlayer({ videoId, onProgress, onPlay, initialTime =
     if (!containerRef.current) return
 
     const player = new Player(containerRef.current, {
-      id: parseInt(videoId),
+      id: isNaN(Number(videoId)) ? videoId : parseInt(videoId),
       responsive: true,
       playsinline: true,
       autopause: false,

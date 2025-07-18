@@ -5,12 +5,14 @@ import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/types/database'
 import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
+import { Heart } from 'lucide-react'
 
 type Comment = Database['public']['Tables']['comments']['Row'] & {
   profiles: {
     name: string | null
     email: string | null
   } | null
+  user_has_liked?: boolean
 }
 
 interface CommentsProps {
@@ -29,7 +31,7 @@ export function Comments({ videoId, userId }: CommentsProps) {
   }, [videoId])
 
   const fetchComments = async () => {
-    const { data } = await supabase
+    const { data: commentsData } = await supabase
       .from('comments')
       .select(`
         *,
@@ -42,8 +44,24 @@ export function Comments({ videoId, userId }: CommentsProps) {
       .eq('is_visible', true)
       .order('created_at', { ascending: false })
 
-    if (data) {
-      setComments(data as Comment[])
+    if (commentsData && userId) {
+      // ユーザーがいいねしたコメントのIDを取得
+      const { data: userLikes } = await supabase
+        .from('comment_likes')
+        .select('comment_id')
+        .eq('user_id', userId)
+        .in('comment_id', commentsData.map(c => c.id))
+
+      const likedCommentIds = new Set(userLikes?.map(like => like.comment_id) || [])
+      
+      const commentsWithLikes = commentsData.map(comment => ({
+        ...comment,
+        user_has_liked: likedCommentIds.has(comment.id)
+      }))
+      
+      setComments(commentsWithLikes as Comment[])
+    } else if (commentsData) {
+      setComments(commentsData as Comment[])
     }
   }
 
@@ -70,6 +88,33 @@ export function Comments({ videoId, userId }: CommentsProps) {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleLike = async (commentId: string) => {
+    if (!userId) return
+
+    const comment = comments.find(c => c.id === commentId)
+    if (!comment) return
+
+    if (comment.user_has_liked) {
+      // いいねを削除
+      await supabase
+        .from('comment_likes')
+        .delete()
+        .eq('user_id', userId)
+        .eq('comment_id', commentId)
+    } else {
+      // いいねを追加
+      await supabase
+        .from('comment_likes')
+        .insert({
+          user_id: userId,
+          comment_id: commentId
+        })
+    }
+
+    // コメントを再取得
+    fetchComments()
   }
 
   return (
@@ -110,6 +155,22 @@ export function Comments({ videoId, userId }: CommentsProps) {
               </span>
             </div>
             <p className="text-gray-700">{comment.content}</p>
+            <div className="mt-3 flex items-center gap-4">
+              <button
+                onClick={() => handleLike(comment.id)}
+                className={`flex items-center gap-1 text-sm transition-colors ${
+                  comment.user_has_liked 
+                    ? 'text-red-500 hover:text-red-600' 
+                    : 'text-gray-500 hover:text-gray-700'
+                } ${!userId ? 'cursor-not-allowed opacity-50' : ''}`}
+                disabled={!userId}
+              >
+                <Heart 
+                  className={`w-4 h-4 ${comment.user_has_liked ? 'fill-current' : ''}`} 
+                />
+                <span>{comment.likes_count || 0}</span>
+              </button>
+            </div>
           </div>
         ))}
       </div>

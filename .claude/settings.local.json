@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git fetch:*)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(git rev-parse:*)",
+      "Bash(git config:*)",
+      "Bash(git remote add:*)",
+      "Bash(chmod:*)",
+      "Bash(./create-clean-repo.sh:*)",
+      "Bash(./push-to-education.sh:*)",
+      "Bash(./apply-fixes.sh:*)",
+      "Bash(./apply-ui-updates.sh:*)",
+      "Bash(ls:*)",
+      "Bash(rm:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(vercel)",
+      "Bash(vercel:*)"
+    ],
+    "deny": []
+  }
+}
