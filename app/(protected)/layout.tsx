@@ -2,23 +2,12 @@ import Navigation from '@/components/layout/navigation-server'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
-export default async function ProtectedLayout({
+export default function ProtectedLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  try {
-    const supabase = await createClient()
-    const { data: { user }, error } = await supabase.auth.getUser()
-
-    if (error || !user) {
-      redirect('/login')
-    }
-  } catch (error) {
-    // 認証エラーの場合はログインページへリダイレクト
-    redirect('/login')
-  }
-
+  // 認証を無効化
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
