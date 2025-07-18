@@ -19,7 +19,11 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(vercel)",
-      "Bash(vercel:*)"
+      "Bash(vercel:*)",
+      "Bash(curl:*)",
+      "WebFetch(domain:movie-poh4q4ab0-land-bridge.vercel.app)",
+      "Bash(npm run build:*)",
+      "WebFetch(domain:movie-xw3e5rrw2-land-bridge.vercel.app)"
     ],
     "deny": []
   }

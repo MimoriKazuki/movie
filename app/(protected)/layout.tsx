@@ -7,17 +7,18 @@ export default async function ProtectedLayout({
 }: {
   children: React.ReactNode
 }) {
-  try {
-    const supabase = await createClient()
-    const { data: { user }, error } = await supabase.auth.getUser()
+  // 一時的に認証を無効化
+  // try {
+  //   const supabase = await createClient()
+  //   const { data: { user }, error } = await supabase.auth.getUser()
 
-    if (error || !user) {
-      redirect('/login')
-    }
-  } catch (error) {
-    // 認証エラーの場合はログインページへリダイレクト
-    redirect('/login')
-  }
+  //   if (error || !user) {
+  //     redirect('/login')
+  //   }
+  // } catch (error) {
+  //   // 認証エラーの場合はログインページへリダイレクト
+  //   redirect('/login')
+  // }
 
   return (
     <div className="min-h-screen bg-gray-50">
