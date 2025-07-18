@@ -6,11 +6,15 @@ export default async function RegisterLayout({
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error } = await supabase.auth.getUser()
 
-  if (user) {
-    redirect('/dashboard')
+    if (!error && user) {
+      redirect('/dashboard')
+    }
+  } catch (error) {
+    // 認証エラーの場合は何もしない（レジスターページを表示）
   }
 
   return <>{children}</>
