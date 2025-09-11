@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/types/database'
 import { Upload, X } from 'lucide-react'
 import { TagInput } from '@/components/ui/tag-input'
+import { ImageUpload } from '@/components/ui/ImageUpload'
 
 type VideoInsert = Database['public']['Tables']['videos']['Insert']
 
@@ -15,6 +16,13 @@ interface VideoFormWithUploadProps {
 }
 
 export function VideoFormWithUpload({ video, onSubmit, isLoading }: VideoFormWithUploadProps) {
+  const normalizeTitle = (raw: string) => {
+    if (!raw) return ''
+    // Strip path components if any
+    const base = raw.split('\\').pop()!.split('/').pop()!
+    // Remove common image/video file extensions
+    return base.replace(/\.(png|jpe?g|webp|gif|mp4|mov|mkv|avi)$/i, '')
+  }
   const [formData, setFormData] = useState({
     title: video?.title || '',
     description: video?.description || '',
@@ -25,6 +33,8 @@ export function VideoFormWithUpload({ video, onSubmit, isLoading }: VideoFormWit
     is_published: video?.is_published || false,
     is_recommended: (video as any)?.is_recommended || false,
     thumbnail_url: video?.thumbnail_url || null,
+    price: (video as any)?.price || 1000, // デフォルト価格を1000円に設定
+    is_free: video ? (video as any)?.is_free : false, // 新規作成時はデフォルトで有料
   })
   const [genres, setGenres] = useState<Array<{id: string, name: string, slug: string}>>([])
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
@@ -146,6 +156,8 @@ export function VideoFormWithUpload({ video, onSubmit, isLoading }: VideoFormWit
         tags: formData.tags.length > 0 ? formData.tags : null,
         is_published: formData.is_published,
         is_recommended: formData.is_recommended,
+        price: formData.is_free ? 0 : formData.price,
+        is_free: formData.is_free,
       }
       
       console.log('Submitting video data:', submitData)
@@ -171,6 +183,7 @@ export function VideoFormWithUpload({ video, onSubmit, isLoading }: VideoFormWit
           required
           value={formData.title}
           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          onBlur={(e) => setFormData({ ...formData, title: normalizeTitle(e.target.value) })}
           className={inputClass}
           style={{ backgroundColor: 'white', color: '#111827' }}
         />
@@ -199,48 +212,11 @@ export function VideoFormWithUpload({ video, onSubmit, isLoading }: VideoFormWit
         <label className="block text-sm font-medium text-gray-700 mb-2">
           サムネイル画像
         </label>
-        {thumbnailPreview ? (
-          <div className="relative w-full max-w-md">
-            <img
-              src={thumbnailPreview}
-              alt="サムネイルプレビュー"
-              className="w-full aspect-video object-cover rounded-lg"
-            />
-            <button
-              type="button"
-              onClick={removeThumbnail}
-              className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        ) : (
-          <div>
-            <label 
-              htmlFor="thumbnail-upload" 
-              className="block cursor-pointer"
-            >
-              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-gray-400 bg-white">
-                <div className="space-y-1 text-center">
-                  <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                  <div className="text-sm text-gray-600">
-                    <span className="font-medium text-blue-600 hover:text-blue-500">
-                      クリックして画像を選択
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500">PNG, JPG, GIF 最大10MB</p>
-                </div>
-              </div>
-            </label>
-            <input
-              id="thumbnail-upload"
-              type="file"
-              className="hidden"
-              accept="image/*"
-              onChange={handleThumbnailChange}
-            />
-          </div>
-        )}
+        <ImageUpload
+          value={formData.thumbnail_url || ''}
+          onChange={(url) => setFormData({ ...formData, thumbnail_url: url })}
+          bucket="thumbnails"
+        />
       </div>
 
       <div>
@@ -301,6 +277,63 @@ export function VideoFormWithUpload({ video, onSubmit, isLoading }: VideoFormWit
           suggestions={tagSuggestions}
           maxTags={10}
         />
+      </div>
+
+      <div className="space-y-4 border border-gray-200 rounded-lg p-4 bg-gray-50">
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">価格設定</h3>
+        
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            id="is_free"
+            checked={formData.is_free}
+            onChange={(e) => {
+              setFormData({ 
+                ...formData, 
+                is_free: e.target.checked,
+                price: e.target.checked ? 0 : 1000 // 無料にチェックしたら価格を0に、外したら1000円に
+              })
+            }}
+            className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+          />
+          <label htmlFor="is_free" className="ml-2 block text-sm text-gray-900">
+            無料で公開
+          </label>
+        </div>
+
+        {!formData.is_free && (
+          <div>
+            <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-2">
+              販売価格（円） *
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">¥</span>
+              <input
+                type="number"
+                id="price"
+                min="100"
+                step="100"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: parseInt(e.target.value) || 0 })}
+                className="pl-8 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                style={{ backgroundColor: 'white', color: '#111827' }}
+                placeholder="1000"
+                required
+              />
+            </div>
+            <p className="mt-1 text-sm text-gray-500">
+              100円単位で設定してください（最小: 100円）
+            </p>
+          </div>
+        )}
+
+        {formData.is_free && (
+          <div className="bg-green-50 border border-green-200 rounded p-3">
+            <p className="text-sm text-green-700">
+              この動画は無料で公開されます
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center">

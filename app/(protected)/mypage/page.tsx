@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { FavoriteVideos } from '@/components/mypage/favorite-videos'
@@ -22,7 +23,9 @@ export default async function MyPage() {
 
   // プロフィールが存在しない場合は作成（プロフィールが見つからないエラーの場合のみ）
   if (!profile && profileError?.code === 'PGRST116') {
-    const { data: newProfile, error: insertError } = await supabase
+    // Service roleを使用してRLSをバイパスしてプロフィールを作成
+    const serviceClient = createServiceClient()
+    const { data: newProfile, error: insertError } = await serviceClient
       .from('profiles')
       .insert({
         id: user.id,
@@ -34,7 +37,7 @@ export default async function MyPage() {
       .single()
     
     if (insertError) {
-      console.error('Profile creation error:', insertError)
+      console.error('Profile creation error:', JSON.stringify(insertError, null, 2))
       // 既に存在している場合は再度取得を試みる
       const { data: existingProfile } = await supabase
         .from('profiles')
@@ -56,10 +59,21 @@ export default async function MyPage() {
 
       <div className="bg-white rounded-lg shadow p-6 mb-8">
         <div className="flex items-center gap-4">
-          <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center">
-            <span className="text-2xl font-bold text-gray-600">
-              {profile?.name?.[0] || profile?.email?.[0] || 'U'}
-            </span>
+          <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+            {profile?.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt={profile?.name || 'avatar'}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none'
+                }}
+              />
+            ) : (
+              <span className="text-2xl font-bold text-gray-600">
+                {profile?.name?.[0] || profile?.email?.[0] || 'U'}
+              </span>
+            )}
           </div>
           <div>
             <h2 className="text-xl font-semibold">{profile?.name || 'ユーザー'}</h2>
@@ -88,6 +102,7 @@ export default async function MyPage() {
             id: user.id,
             email: user.email || '',
             name: user.user_metadata?.name || '',
+            avatar_url: null,
             role: 'user',
             created_at: new Date().toISOString()
           }} />

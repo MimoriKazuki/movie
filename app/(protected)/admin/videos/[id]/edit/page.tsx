@@ -40,15 +40,24 @@ export default function EditVideoPage({ params }: { params: Promise<{ id: string
     is_published: boolean
     is_recommended: boolean
     thumbnail_url?: string | null
+    price?: number
+    is_free?: boolean
   }) => {
     setIsLoading(true)
     try {
       console.log('Updating video with data:', data)
       
+      // Derive is_free from price if provided to avoid inconsistencies
+      const normalized = {
+        ...data,
+        price: typeof data.price === 'number' ? data.price : undefined,
+        is_free: typeof data.price === 'number' ? (data.price <= 0) : data.is_free,
+      }
+
       const { data: result, error } = await supabase
         .from('videos')
         .update({
-          ...data,
+          ...normalized,
           updated_at: new Date().toISOString()
         })
         .eq('id', resolvedParams.id)

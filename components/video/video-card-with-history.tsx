@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { Database } from '@/types/database'
-import { Play, Clock, Eye, Calendar } from 'lucide-react'
+import { Play, Clock, Calendar } from 'lucide-react'
 import { VideoModal } from './video-modal'
 import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -34,12 +34,7 @@ export function VideoCardWithHistory({ video, progress, variant = 'default' }: V
     getUser()
   }, [supabase])
 
-  const formatViewCount = (count: number) => {
-    if (count >= 10000) {
-      return `${(count / 10000).toFixed(1)}万`
-    }
-    return count.toLocaleString()
-  }
+  // 閲覧数表示は廃止
 
   const isNew = () => {
     // Don't show "New" badge if user has already viewed this video
@@ -59,24 +54,9 @@ export function VideoCardWithHistory({ video, progress, variant = 'default' }: V
           className={styles.compactCard}
           onClick={() => setIsModalOpen(true)}
         >
-          <div className={styles.compactThumbnail}>
-            {video.thumbnail_url ? (
-              <img
-                src={video.thumbnail_url}
-                alt={video.title}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full bg-gradient-to-br from-gray-700 to-gray-900">
-                <Play className="w-8 h-8 text-gray-400" />
-              </div>
-            )}
-          </div>
           <div className={styles.compactContent}>
             <h4 className="font-medium text-sm line-clamp-2 text-gray-900">{video.title}</h4>
-            <p className="text-xs text-gray-500 mt-1">
-              {formatViewCount(video.view_count)} 回視聴
-            </p>
+            {/* 閲覧数は非表示に */}
           </div>
         </div>
         
@@ -101,6 +81,8 @@ export function VideoCardWithHistory({ video, progress, variant = 'default' }: V
               src={video.thumbnail_url}
               alt={video.title}
               className={styles.thumbnail}
+              loading="lazy"
+              decoding="async"
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-900">
@@ -148,10 +130,6 @@ export function VideoCardWithHistory({ video, progress, variant = 'default' }: V
             )}
             
             <div className={styles.metadata}>
-              <div className={styles.metaItem}>
-                <Eye className="w-3.5 h-3.5" />
-                <span>{formatViewCount(video.view_count)}</span>
-              </div>
               <div className={styles.metaItem}>
                 <Calendar className="w-3.5 h-3.5" />
                 <span>

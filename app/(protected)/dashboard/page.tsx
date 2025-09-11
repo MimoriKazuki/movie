@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import ContinueWatching from '@/components/dashboard/continue-watching'
-import RecommendedVideos from '@/components/dashboard/recommended-videos'
-import PopularVideos from '@/components/dashboard/popular-videos'
-import NewVideos from '@/components/dashboard/new-videos'
+import HeroSection from '@/components/dashboard/hero-section'
+import CategoryCards from '@/components/dashboard/category-cards'
+import FeaturedCourses from '@/components/dashboard/featured-courses'
+import LearningProgress from '@/components/dashboard/learning-progress'
+import RecentActivity from '@/components/dashboard/recent-activity'
+import LearningStats from '@/components/dashboard/learning-stats'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -13,29 +15,49 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
+  // Get user profile
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single()
+
   return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-gray-900">ダッシュボード</h1>
+    <div className="min-h-screen">
+      {/* ヒーローセクション */}
+      <HeroSection userName={profile?.display_name || 'ユーザー'} />
       
-      <section>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">続きから視聴</h2>
-        <ContinueWatching userId={user.id} />
-      </section>
+      {/* カテゴリーカード - 生成AIカテゴリー */}
+      <div className="bg-gray-50 pt-12 pb-8">
+        <div className="max-w-7xl mx-auto px-4">
+          <CategoryCards userId={user.id} isAdmin={profile?.role === 'admin'} />
+        </div>
+      </div>
+      
+      {/* 学習データセクション */}
+      <div className="bg-white py-12">
+        <div className="max-w-7xl mx-auto px-4">
+          <LearningStats userId={user.id} />
+        </div>
+      </div>
 
-      <section>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">おすすめ動画</h2>
-        <RecommendedVideos userId={user.id} />
-      </section>
-
-      <section>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">人気の動画</h2>
-        <PopularVideos />
-      </section>
-
-      <section>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">新着動画</h2>
-        <NewVideos />
-      </section>
+      {/* メインコンテンツ */}
+      <div className="bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* 左側: おすすめコースと学習進捗 */}
+          <div className="lg:col-span-2 space-y-8">
+            <FeaturedCourses userId={user.id} isAdmin={profile?.role === 'admin'} />
+            <LearningProgress userId={user.id} />
+          </div>
+          
+          {/* 右側: 最近のアクティビティ */}
+          <div>
+            <RecentActivity userId={user.id} />
+          </div>
+        </div>
+        </div>
+      </div>
     </div>
   )
 }

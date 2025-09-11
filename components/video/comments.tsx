@@ -7,20 +7,29 @@ import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { Heart } from 'lucide-react'
 
-type Comment = Database['public']['Tables']['comments']['Row'] & {
+type Comment = {
+  id: string
+  content: string
+  created_at: string
+  updated_at: string
+  is_edited: boolean
+  user_id: string
   profiles: {
     name: string | null
-    email: string | null
+    avatar_url: string | null
   } | null
   user_has_liked?: boolean
+  likes_count?: number
+  replies?: Comment[]
 }
 
 interface CommentsProps {
   videoId: string
   userId?: string
+  initialComments?: Comment[]
 }
 
-export function Comments({ videoId, userId }: CommentsProps) {
+export function Comments({ videoId, userId, initialComments = [] }: CommentsProps) {
   const [comments, setComments] = useState<Comment[]>([])
   const [newComment, setNewComment] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -32,16 +41,16 @@ export function Comments({ videoId, userId }: CommentsProps) {
 
   const fetchComments = async () => {
     const { data: commentsData } = await supabase
-      .from('comments')
+      .from('video_comments')
       .select(`
         *,
         profiles:user_id (
           name,
-          email
+          avatar_url
         )
       `)
       .eq('video_id', videoId)
-      .eq('is_visible', true)
+      .is('parent_comment_id', null)
       .order('created_at', { ascending: false })
 
     if (commentsData && userId) {
@@ -72,7 +81,7 @@ export function Comments({ videoId, userId }: CommentsProps) {
     setIsLoading(true)
     try {
       const { error } = await supabase
-        .from('comments')
+        .from('video_comments')
         .insert({
           video_id: videoId,
           user_id: userId,
@@ -144,9 +153,25 @@ export function Comments({ videoId, userId }: CommentsProps) {
         {comments.map((comment) => (
           <div key={comment.id} className="p-4 bg-gray-50 rounded-lg">
             <div className="flex items-center justify-between mb-2">
-              <span className="font-medium">
-                {comment.profiles?.name || comment.profiles?.email || '匿名ユーザー'}
-              </span>
+              <div className="flex items-center gap-2">
+                {comment.profiles?.avatar_url ? (
+                  <img 
+                    src={comment.profiles.avatar_url} 
+                    alt={comment.profiles.name || ''}
+                    className="w-8 h-8 rounded-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none'
+                    }}
+                  />
+                ) : (
+                  <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-bold text-gray-600">
+                    {(comment.profiles?.name || 'U').slice(0,1)}
+                  </div>
+                )}
+                <span className="font-medium">
+                  {comment.profiles?.name || '匿名ユーザー'}
+                </span>
+              </div>
               <span className="text-sm text-gray-500">
                 {formatDistanceToNow(new Date(comment.created_at), {
                   addSuffix: true,

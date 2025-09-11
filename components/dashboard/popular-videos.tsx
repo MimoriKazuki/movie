@@ -6,12 +6,55 @@ export default async function PopularVideos() {
   
   const { data: { user } } = await supabase.auth.getUser()
   
-  const { data: videos } = await supabase
-    .from('videos')
-    .select('*')
-    .eq('is_published', true)
-    .order('view_count', { ascending: false })
-    .limit(4)
+  // Check if user is admin
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user?.id || '')
+    .single()
+  
+  const isAdmin = profile?.role === 'admin'
+  
+  let videos = null
+  
+  if (isAdmin) {
+    // 管理者は全ての人気動画を見ることができる
+    const { data } = await supabase
+      .from('videos')
+      .select('*')
+      .eq('is_published', true)
+      .order('view_count', { ascending: false })
+      .limit(4)
+    videos = data
+  } else if (user) {
+    // 一般ユーザーは購入したコースの人気動画のみ
+    const { data: purchasedCourses } = await supabase
+      .from('course_purchases')
+      .select('course_id')
+      .eq('user_id', user.id)
+    
+    if (purchasedCourses && purchasedCourses.length > 0) {
+      const courseIds = purchasedCourses.map(p => p.course_id)
+      
+      const { data: courseVideos } = await supabase
+        .from('course_videos')
+        .select('video_id')
+        .in('course_id', courseIds)
+      
+      if (courseVideos && courseVideos.length > 0) {
+        const videoIds = [...new Set(courseVideos.map(cv => cv.video_id))]
+        
+        const { data } = await supabase
+          .from('videos')
+          .select('*')
+          .in('id', videoIds)
+          .eq('is_published', true)
+          .order('view_count', { ascending: false })
+          .limit(4)
+        videos = data
+      }
+    }
+  }
   
   // Get user's view history for progress
   let viewHistory: Record<string, number> = {}

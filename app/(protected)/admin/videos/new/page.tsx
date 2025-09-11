@@ -19,14 +19,23 @@ export default function NewVideoPage() {
     is_published: boolean
     is_recommended: boolean
     thumbnail_url?: string | null
+    price?: number
+    is_free?: boolean
   }) => {
     setIsLoading(true)
     try {
       console.log('Creating video with data:', data)
       
+      // Normalize: if price > 0, ensure is_free = false; price 0 → free
+      const normalized = {
+        ...data,
+        price: typeof data.price === 'number' ? data.price : 0,
+        is_free: typeof data.price === 'number' ? (data.price <= 0) : true,
+      }
+
       const { data: result, error } = await supabase
         .from('videos')
-        .insert([data])
+        .insert([normalized])
         .select()
 
       if (error) {

@@ -11,7 +11,7 @@ export default async function AdminLayout({
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) {
-    redirect('/login')
+    redirect('/admin/login')
   }
 
   const { data: profile } = await supabase
@@ -21,7 +21,7 @@ export default async function AdminLayout({
     .single()
 
   if (profile?.role !== 'admin') {
-    redirect('/dashboard')
+    redirect('/admin/login')
   }
 
   return <>{children}</>

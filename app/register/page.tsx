@@ -64,7 +64,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         {/* Logo/Brand Area */}
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-light text-gray-900 mb-2">社内動画教育</h1>
+          <h1 className="text-4xl font-light text-gray-900 mb-2">誰でもエンジニア</h1>
           <p className="text-gray-500 text-sm">学びをもっと身近に、社内の学びを自由に</p>
         </div>
 
@@ -171,7 +171,7 @@ export default function RegisterPage() {
         {/* Footer */}
         <div className="mt-8 text-center">
           <p className="text-xs text-gray-400">
-            © 2025 社内動画教育. All rights reserved.
+            © 2025 誰でもエンジニア. All rights reserved.
           </p>
         </div>
       </div>

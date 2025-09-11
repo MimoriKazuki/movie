@@ -9,6 +9,9 @@ type Profile = Database['public']['Tables']['profiles']['Row']
 
 export function ProfileSettings({ profile }: { profile: Profile | null }) {
   const [name, setName] = useState(profile?.name || '')
+  const [avatarUrl, setAvatarUrl] = useState<string | null>((profile as any)?.avatar_url || null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const supabase = createClient()
   const router = useRouter()
@@ -42,12 +45,142 @@ export function ProfileSettings({ profile }: { profile: Profile | null }) {
     }
   }
 
+  const MAX_FILE_SIZE = 3 * 1024 * 1024 // 3MB
+  const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
+
+  const compressImage = (file: File, maxWidth = 512, maxHeight = 512, quality = 0.8): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      const reader = new FileReader()
+      reader.onload = () => {
+        img.onload = () => {
+          let { width, height } = img
+          const ratio = Math.min(maxWidth / width, maxHeight / height, 1)
+          width = Math.round(width * ratio)
+          height = Math.round(height * ratio)
+
+          const canvas = document.createElement('canvas')
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext('2d')
+          if (!ctx) return reject(new Error('Canvas not supported'))
+          ctx.drawImage(img, 0, 0, width, height)
+
+          // Prefer JPEG to reduce size; keep PNG if original was PNG
+          const outType = file.type === 'image/png' ? 'image/png' : 'image/jpeg'
+          canvas.toBlob((blob) => {
+            if (!blob) return reject(new Error('Compression failed'))
+            resolve(blob)
+          }, outType, quality)
+        }
+        img.onerror = () => reject(new Error('Invalid image'))
+        img.src = reader.result as string
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !profile) return
+    setUploading(true)
+    setUploadError(null)
+    try {
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        throw new Error('対応していない画像形式です（jpg, png, webp, gif）')
+      }
+
+      let dataToUpload: Blob | File = file
+      // Skip compression for GIF to keep animation
+      const shouldCompress = file.size > MAX_FILE_SIZE && file.type !== 'image/gif'
+      if (shouldCompress) {
+        dataToUpload = await compressImage(file)
+        if (dataToUpload.size > MAX_FILE_SIZE) {
+          throw new Error('画像サイズが大きすぎます（最大3MB）。もう少し小さい画像をお使いください。')
+        }
+      }
+
+      const ext = file.name.split('.').pop()
+      // If compressed to JPEG/PNG, adjust extension accordingly
+      const outExt = dataToUpload.type === 'image/png' ? 'png' : dataToUpload.type === 'image/jpeg' ? 'jpg' : ext
+      const fileName = `${profile.id}/${Date.now()}.${outExt}`
+      const { data, error } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, dataToUpload, { upsert: true, contentType: (dataToUpload as any).type || file.type })
+      if (error) throw error
+      const { data: publicUrlData } = await supabase.storage
+        .from('avatars')
+        .getPublicUrl(data.path)
+      const publicUrl = publicUrlData.publicUrl
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', profile.id)
+      if (updateError) throw updateError
+      setAvatarUrl(publicUrl)
+      router.refresh()
+    } catch (err) {
+      console.error('Avatar upload error:', err)
+      setUploadError(err instanceof Error ? err.message : 'アバターのアップロードに失敗しました')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleAvatarRemove = async () => {
+    if (!profile) return
+    setUploading(true)
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ avatar_url: null })
+        .eq('id', profile.id)
+      if (error) throw error
+      setAvatarUrl(null)
+      router.refresh()
+    } catch (err) {
+      console.error('Avatar remove error:', err)
+      alert('アバターの削除に失敗しました')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const inputClassName = "mt-2 block w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
   const disabledInputClassName = "mt-2 block w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
 
   return (
     <div className="max-w-lg bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Avatar */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">アバター</label>
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-lg font-bold text-gray-600">
+                  {profile.name?.[0] || profile.email?.[0] || 'U'}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg border cursor-pointer text-sm">
+                画像を選択
+                <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+              </label>
+              {avatarUrl && (
+                <button type="button" onClick={handleAvatarRemove} className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg border text-sm">
+                  削除
+                </button>
+              )}
+            </div>
+        </div>
+          {uploading && <p className="text-xs text-gray-500 mt-1">アップロード中...</p>}
+          {uploadError && <p className="text-xs text-red-600 mt-1">{uploadError}</p>}
+        </div>
         <div>
           <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-1">
             メールアドレス

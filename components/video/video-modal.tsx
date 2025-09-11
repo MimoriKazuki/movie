@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { X } from 'lucide-react'
 import VimeoPlayer from './vimeo-player'
-import { useVideoHistory } from '@/hooks/use-video-history'
+import { createClient } from '@/lib/supabase/client'
 
 interface VideoModalProps {
   isOpen: boolean
@@ -17,20 +17,40 @@ interface VideoModalProps {
 }
 
 export function VideoModal({ isOpen, onClose, videoId, databaseId, userId, initialTime, onProgress, onPlay }: VideoModalProps) {
-  const { recordVideoStart, updateProgress } = useVideoHistory(databaseId || '', userId || '')
+  const supabase = createClient()
 
-  const handlePlay = () => {
+  const handlePlay = async () => {
     if (databaseId && userId) {
-      recordVideoStart()
+      // 視聴開始を記録
+      await supabase
+        .from('view_history')
+        .upsert({
+          video_id: databaseId,
+          user_id: userId,
+          progress: 0,
+          last_viewed_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,video_id'
+        })
     }
     if (onPlay) {
       onPlay()
     }
   }
 
-  const handleProgress = (seconds: number) => {
+  const handleProgress = async (seconds: number) => {
     if (databaseId && userId) {
-      updateProgress(seconds)
+      // 進捗を更新
+      await supabase
+        .from('view_history')
+        .upsert({
+          video_id: databaseId,
+          user_id: userId,
+          progress: seconds,
+          last_viewed_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,video_id'
+        })
     }
     if (onProgress) {
       onProgress(seconds)

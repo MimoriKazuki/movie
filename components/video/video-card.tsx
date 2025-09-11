@@ -28,6 +28,8 @@ export function VideoCard({ video, progress, variant = 'default' }: VideoCardPro
                 src={video.thumbnail_url}
                 alt={video.title}
                 className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
               />
             ) : (
               <div className="flex items-center justify-center h-full">
@@ -37,7 +39,7 @@ export function VideoCard({ video, progress, variant = 'default' }: VideoCardPro
           </div>
           <div className="flex-1 min-w-0">
             <h4 className="font-medium text-sm line-clamp-2">{video.title}</h4>
-            <p className="text-gray-500 text-xs mt-1">{video.view_count.toLocaleString()} 回視聴</p>
+            {/* 閲覧数は非表示に */}
           </div>
         </div>
       </Link>
@@ -85,10 +87,7 @@ export function VideoCard({ video, progress, variant = 'default' }: VideoCardPro
         <Link href={`/video/${video.id}`}>
           <div className="p-4">
             <h3 className="font-semibold text-gray-900 line-clamp-2">{video.title}</h3>
-            <div className="mt-2 flex items-center text-sm text-gray-500">
-              <Clock className="w-4 h-4 mr-1" />
-              <span>{video.view_count.toLocaleString()} 回視聴</span>
-            </div>
+            {/* 閲覧数は非表示に。必要なら再表示可 */}
             {video.tags && video.tags.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1">
                 {video.tags.slice(0, 3).map((tag, index) => (

@@ -2,6 +2,7 @@ export interface Profile {
   id: string
   email: string | null
   name: string | null
+  avatar_url?: string | null
   role: 'user' | 'admin'
   created_at: string
 }
